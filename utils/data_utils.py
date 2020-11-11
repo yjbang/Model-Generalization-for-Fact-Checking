@@ -893,7 +893,7 @@ class NewsCategorizationDataLoader(DataLoader):
 class FakeNewsDataset(Dataset):
     # Static constant variable
     LABEL2INDEX = {'fake': 0, 'real': 1}
-    INDEX2LABEL = {0: 'real', 1: 'fake'}
+    INDEX2LABEL = {0: 'fake', 1: 'real'}
     NUM_LABELS = 2
     
     def load_dataset(self, path): 
