@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 from collections import Counter
-from utils import preprocess_tweet
+from utils.utils import preprocess_tweet
 
 TRAIN_PATH = './data/train.tsv'
 VAL_PATH =  './data/valid.tsv'
