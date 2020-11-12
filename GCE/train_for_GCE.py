@@ -66,8 +66,6 @@ def main():
         start_epoch = 0
         net = #####
         
-        
-        
 
     result_folder = './results/'
     if not os.path.exists(result_folder):

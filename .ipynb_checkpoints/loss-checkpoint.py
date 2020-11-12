@@ -38,13 +38,16 @@ class SCELoss(nn.Module):
 #simplified
 #need to rewrite train function for original Generalized Cross Entropy Loss please refer to train_for_GCE.py and GCEloss.py
 class GCELoss_s(nn.Module):
-    def __init__(self, q=0.7):
+    def __init__(self, q=0.7, k=0.5):
         super(GCELoss1, self).__init__()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.q = q
+        self.k = k
         
     def forward(self, pred, labels):
-        t_loss = (1 - torch.pow(torch.sum(labels * pred, axis=-1), self.q)) / self.q
+        Lq = (1 - torch.pow(torch.sum(labels * pred, axis=-1), self.q)) / self.q
+        Lqk = (1-(self.k**self.q))/self.q
+        t_loss = torch.clamp_max(Lq, Lqk)
         loss = torch.mean(t_loss)
         return loss  
     
