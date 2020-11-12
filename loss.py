@@ -36,6 +36,7 @@ class SCELoss(nn.Module):
         return loss
 
 #simplified
+#need to rewrite train function for original Generalized Cross Entropy Loss please refer to train_for_GCE.py and GCEloss.py
 class GCELoss_s(nn.Module):
     def __init__(self, q=0.7):
         super(GCELoss1, self).__init__()
