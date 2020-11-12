@@ -32,3 +32,15 @@ class SCELoss(nn.Module):
         # Loss
         loss = self.alpha * ce + self.beta * rce.mean()
         return loss
+
+#simplified
+class GCELoss_s(nn.Module):
+    def __init__(self, q=0.7):
+        super(GCELoss1, self).__init__()
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.q = q
+        
+    def forward(self, pred, labels):
+        t_loss = (1 - torch.pow(torch.sum(labels * pred, axis=-1), self.q)) / self.q
+        loss = torch.mean(t_loss)
+        return loss  
