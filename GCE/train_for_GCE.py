@@ -110,7 +110,7 @@ def train(epoch, trainloader, net, criterion, optimizer):
     train_loss = 0
     correct = 0
     total = 0
-
+#alternative convex search (ACS)
     if (epoch+1) >= args.start_prune and (epoch+1) % 10 == 0:
         checkpoint = torch.load('./checkpoint/ckpt.t7.' + args.sess)#best acc
         net = checkpoint['net']
