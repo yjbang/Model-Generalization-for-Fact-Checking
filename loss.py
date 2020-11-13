@@ -8,6 +8,10 @@ from torch.autograd import Variable
 
 # if args.loss == 'SCE':
 #     criterion = SCELoss(alpha=args.alpha, beta=args.beta, num_classes=num_classes)
+# elif args.loss == 'GCE':
+#     criterion = GCELoss_s()
+# elif args.loss == 'CL':
+#     criterion = CLoss()
 # elif args.loss == 'CE':
 #     criterion = torch.nn.CrossEntropyLoss()
 
@@ -47,7 +51,7 @@ class SCELoss(nn.Module):
         
 #     def forward(self, pred, labels):
 #         pred = F.softmax(pred, dim=1)
-#         Lq = (1 - torch.pow(torch.sum(labels * pred, axis=-1), self.q)) / self.q
+#         错Lq = (1 - torch.pow(torch.sum(labels * pred, axis=-1), self.q)) / self.q
 #         Lqk = (1-(self.k**self.q))/self.q
 #         t_loss = torch.clamp_max(Lq, Lqk)
 #         loss = torch.mean(t_loss)
@@ -77,16 +81,14 @@ class GCELoss_s(nn.Module):
 def HardHingeLoss(logit, groundTruth, device):    
     Nc = logit.data.size()
     y_onehot = torch.FloatTensor(len(groundTruth), Nc[1])
-   
-   
     y_onehot.zero_()
     y_onehot.scatter_(1, groundTruth.data.cpu().view(len(groundTruth),1), 1.0)    
     y = torch.autograd.Variable(y_onehot).to(device)
-    t = logit.to(device)*y
+    t = logit*y
     L1 =torch.sum(t, dim=1)
    
-    M,idx = logit.topk(2, 1, True, True)
-    M = M.to(device)
+    M, idx = logit.topk(2, 1, True, True)
+#     M = M.to(device)
    
     f1 = torch.eq(idx[:,0],groundTruth).float().to(device)
     u=  M[:,0]*(1-f1) + M[:,1]*f1
@@ -108,10 +110,10 @@ def SoftHingeLoss(logit, groundTruth, device):
     y_onehot.scatter_(1, groundTruth.data.cpu().view(len(groundTruth),1), 1.0)
    
     y = torch.autograd.Variable(y_onehot).to(device)
-    t = logit.to(device)*y
+    t = logit*y
     L1 =torch.sum(t, dim=1)
     M,idx = logit.topk(2, 1, True, True)
-    M = M.to(device)
+#     M = M.to(device)
 
     f1 = torch.eq(idx[:,0],groundTruth).float().to(device)
 
@@ -153,7 +155,7 @@ class CLoss(nn.Module):
             B = C + B
             mask = (Ls <= B.float()).int()
             num_selected = int(sum(mask))
-            Upbound = float( Ls.data[num_selected-1] <= ( C - num_selected))
+            Upbound = float(Ls.data[num_selected-1] <= ( C - num_selected))
             num_selected = int( min(  round(num_selected + Upbound), len(loss_1_sorted) ))
 
             ind_1_update = ind_1_sorted[:num_selected]
