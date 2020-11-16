@@ -57,19 +57,15 @@ class SCELoss(nn.Module):
 #         loss = torch.mean(t_loss)
 #         return loss  
     
-class GCELoss_s(nn.Module):
+class GCELoss(nn.Module):
     def __init__(self, q=0.7, num_classes=2):
-        super(GCELoss1, self).__init__()
+        super(GCELoss, self).__init__()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.q = q
         self.num_classes = num_classes
         
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-#         one_hot = Variable(torch.zeros(labels.size(0), num_classes).to(self.device).scatter_(1, labels.long().view(-1, 1).data, 1))
-#         mask = one_hot.gt(0)
-#         loss = torch.masked_select(outputs, mask)
-#         loss = loss.sum() / loss.shape[0]
         one_hot = torch.nn.functional.one_hot(labels, self.num_classes).to(self.device)
         loss = (1-(torch.sum(pred * one_hot, dim=1)+10**(-8))**self.q)/self.q
         loss = torch.mean(loss)
@@ -78,6 +74,7 @@ class GCELoss_s(nn.Module):
     
     
 #CL    
+# num_classes=2
 def HardHingeLoss(logit, groundTruth, device):    
     Nc = logit.data.size()
     y_onehot = torch.FloatTensor(len(groundTruth), Nc[1])
@@ -87,7 +84,7 @@ def HardHingeLoss(logit, groundTruth, device):
     t = logit*y
     L1 =torch.sum(t, dim=1)
    
-    M, idx = logit.topk(2, 1, True, True)
+    M, idx = logit.topk(2, 1, True, True) #same as torch.gather(pred, 1, index=labels)
 #     M = M.to(device)
    
     f1 = torch.eq(idx[:,0],groundTruth).float().to(device)
@@ -137,9 +134,8 @@ class CLoss(nn.Module):
         self.Nratio = Nratio
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-    def forward(self, pred, labels):
-        
-        loss_1 = HardHingeLoss(pred, labels, self.device)
+    def forward(self, logit, labels):
+        loss_1 = HardHingeLoss(logit, labels, self.device)
         ind_1_sorted = np.argsort(loss_1.data.cpu()).to(self.device)
         loss_1_sorted = loss_1[ind_1_sorted]
 
@@ -149,7 +145,7 @@ class CLoss(nn.Module):
             Ls = torch.cumsum(loss_1_sorted,dim=0)
             B =  torch.arange(start= 0 ,end=-len(loss_1_sorted),step=-1)
             B = torch.autograd.Variable(B).to(self.device)
-            _, pred1 = torch.max(pred.data, 1)
+            _, pred1 = torch.max(logit.data, 1)
             E = (pred1 != labels.data).sum()
             C = (1-epsilon)**2 *  float(len(loss_1_sorted)) + (1-epsilon) *  E
             B = C + B
@@ -160,10 +156,10 @@ class CLoss(nn.Module):
 
             ind_1_update = ind_1_sorted[:num_selected]
 
-            loss_1_update = SoftHingeLoss(pred[ind_1_update], labels[ind_1_update], self.device)
+            loss_1_update = SoftHingeLoss(logit[ind_1_update], labels[ind_1_update], self.device)
 
         else:
-            loss_1_update = SoftHingeLoss(pred, labels, self.device)
+            loss_1_update = SoftHingeLoss(logit, labels, self.device)
 
         return torch.mean(loss_1_update)
     

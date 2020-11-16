@@ -21,7 +21,6 @@ class GCELoss(nn.Module):
 #         Yg = torch.gather(p, 1, torch.unsqueeze(targets, 1))
 #         Lq = ((1-(Yg**self.q))/self.q)
 
-#         Lq = (1 - torch.pow(torch.sum(labels * pred, axis=-1), self.q)) / self.q
         Lqk = (1-(self.k**self.q))/self.q
         loss = (Lq - Lqk)*self.weight[indexes]
         loss = torch.mean(loss)
