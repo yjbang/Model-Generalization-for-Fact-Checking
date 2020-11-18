@@ -37,7 +37,7 @@ def forward_sequence_classification(model, batch_data, i2w, is_test=False, devic
         list_hyp.append(i2w[hyp[j].item()])
         list_label.append(i2w[label_batch[j][0].item()])
         
-    return loss, list_hyp, list_label
+    return loss, list_hyp, list_label, logits, label_batch
 
 # Forward function for word classification
 def forward_word_classification(model, batch_data, i2w, is_test=False, device='cpu', **kwargs):
