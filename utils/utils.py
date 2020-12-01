@@ -1,3 +1,4 @@
+import torch
 import pandas as pd
 import re
 
@@ -29,3 +30,17 @@ def preprocess_tweet(text):
 
     return text
 
+def generate_random_mask(ids, out_dim, in_dim, p=0.5, device='cpu'):
+    probas = torch.tensor([1-p, p], device=device)
+    weights = torch.tensor([0, 1 / p], device=device)
+    rand_masks = []
+    for id in ids:
+        # Set seed
+        torch.random.manual_seed(id)
+        torch.cuda.random.manual_seed(id)
+
+        # Generate Mask
+        indices = torch.multinomial(probas, num_samples=out_dim * in_dim, replacement=True)
+        rand_mask = weights[indices].view(out_dim, in_dim)
+        rand_masks.append(rand_mask)
+    return torch.stack(rand_masks, dim=0)
