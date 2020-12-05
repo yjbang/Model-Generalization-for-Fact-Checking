@@ -109,7 +109,7 @@ if __name__ == '__main__':
     # Instantiate model
     model = AutoModelForSequenceClassification.from_pretrained('roberta-base', config=config)
     model.load_state_dict(torch.load(model_path))
-    model = model.cuda()
+    model = model.cuda().eval()
 
     ## Prepare dataloader
     train_dataset = FakeNewsDataset(dataset_path=train_dataset_path, tokenizer=tokenizer, lowercase=False)

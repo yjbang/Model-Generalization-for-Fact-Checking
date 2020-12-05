@@ -59,7 +59,7 @@ def forward_mask_sequence_classification(model, batch_data, i2w, apply_mask=Fals
             logits = torch.einsum('bd,bcd->bc', latents, masked_weight) + bias            
             loss = CrossEntropyLoss()(logits.view(-1, model.num_labels), label_batch.view(-1))
         else:
-            ValueError(f'Model class `{type(model)}` is not implemented yet')
+            raise ValueError(f'Model class `{type(model)}` is not implemented yet')
     else:
         outputs = model(subword_batch, attention_mask=mask_batch, token_type_ids=token_type_batch, labels=label_batch)
         loss, logits = outputs[:2]

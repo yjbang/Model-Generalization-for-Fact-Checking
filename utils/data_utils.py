@@ -911,7 +911,7 @@ class FakeNewsDataset(Dataset):
     
     def __getitem__(self, index):
         data = self.data.loc[index,:]
-        id, text, label = data['id'], data['tweet'], data['label']
+        id, text, label = index, data['tweet'], data['label']
         subwords = self.tokenizer.encode(text, add_special_tokens=not self.no_special_token)
         return id, np.array(subwords), np.array(label), data['tweet']
     

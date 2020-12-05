@@ -132,13 +132,15 @@ def get_filtered_dataloader(data_loader, id_list, inclusive=True, batch_size=8, 
     else:
         filt_df = df[~df['id'].isin(id_list)].reset_index(drop=True)
     dataset = FakeNewsDataset(dataset_path=None, dataset=filt_df, tokenizer=tokenizer, lowercase=False)
-    data_loader = FakeNewsDataLoader(dataset=dataset, max_seq_len=512, batch_size=batch_size, num_workers=8, shuffle=shuffle)  
+    data_loader = FakeNewsDataLoader(dataset=dataset, max_seq_len=512, batch_size=batch_size, num_workers=batch_size, shuffle=shuffle)  
     return data_loader
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--percentage', type=float)
-
+    parser.add_argument('--apply_mask', action='store_true', default=False)
+    parser.add_argument('--model_type', type=str, default='roberta-base')
+    
     args = vars(parser.parse_args())
     print(args)
 
@@ -149,12 +151,12 @@ if __name__ == '__main__':
     set_seed(26092020)
 
     # Load Tokenizer and Config
-    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
-    config = AutoConfig.from_pretrained('roberta-base')
+    tokenizer = AutoTokenizer.from_pretrained(args['model_type'])
+    config = AutoConfig.from_pretrained(args['model_type'])
     config.num_labels = FakeNewsDataset.NUM_LABELS
 
     # Instantiate model
-    model = AutoModelForSequenceClassification.from_pretrained('roberta-base', config=config)
+    model = AutoModelForSequenceClassification.from_pretrained(args['model_type'], config=config)
     
     # Prepare dataset
     train_dataset_path = './data/train.tsv'
@@ -164,21 +166,21 @@ if __name__ == '__main__':
     train_dataset = FakeNewsDataset(dataset_path=train_dataset_path, tokenizer=tokenizer, lowercase=False)
     valid_dataset = FakeNewsDataset(dataset_path=valid_dataset_path, tokenizer=tokenizer, lowercase=False)
 
-    train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=8, num_workers=8, shuffle=True)  
-    valid_loader = FakeNewsDataLoader(dataset=valid_dataset, max_seq_len=512, batch_size=8, num_workers=8, shuffle=False)
+    train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=2, num_workers=2, shuffle=True)  
+    valid_loader = FakeNewsDataLoader(dataset=valid_dataset, max_seq_len=512, batch_size=2, num_workers=2, shuffle=False)
 
     # Prepare for training
     percentage = args['percentage']
 
     filt_indices = index_percent_list[f'{percentage:.2f}']
     print(f'== Retraining with {percentage * 100}% cleansing (remove {len(filt_indices)} samples) ==')
-    filt_train_loader = get_filtered_dataloader(train_loader, filt_indices, inclusive=False, batch_size=8, shuffle=True)
+    filt_train_loader = get_filtered_dataloader(train_loader, filt_indices, inclusive=False, batch_size=2, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-5)
     model = model.cuda()
 
     # Train
-    n_epochs = 10
+    n_epochs = 25
     best_val_metric, best_metrics, best_state_dict = 0, None, None
     early_stop, count_stop = 3, 0
     for epoch in range(n_epochs):
@@ -191,7 +193,7 @@ if __name__ == '__main__':
         train_pbar = tqdm(filt_train_loader, leave=True, total=len(filt_train_loader))
         for i, batch_data in enumerate(train_pbar):
             # Forward model
-            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=True, device='cuda')
+            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=args['apply_mask'], device='cuda')
             loss, batch_hyp, batch_label, logits, label_batch = outputs
 
             # Update model
@@ -224,7 +226,7 @@ if __name__ == '__main__':
         pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
         for i, batch_data in enumerate(pbar):
             batch_seq = batch_data[-1]        
-            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=True, device='cuda')
+            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=False, device='cuda')
             loss, batch_hyp, batch_label, logits, label_batch = outputs
 
             # Calculate total loss

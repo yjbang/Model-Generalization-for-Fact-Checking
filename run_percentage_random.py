@@ -231,7 +231,7 @@ if __name__ == '__main__':
         pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
         for i, batch_data in enumerate(pbar):
             batch_seq = batch_data[-1]        
-            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=True, device='cuda')
+            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=False, device='cuda')
             loss, batch_hyp, batch_label, logits, label_batch = outputs
 
             # Calculate total loss
