@@ -95,10 +95,10 @@ def news_categorization_metrics_fn(list_hyp, list_label):
     metrics["PRE"] = precision_score(list_label, list_hyp, average='macro')
     return metrics
 
-def classification_metrics_fn(list_hyp, list_label):
+def classification_metrics_fn(list_hyp, list_label, average='macro', pos_label='fake'):
     metrics = {}
     metrics["ACC"] = accuracy_score(list_label, list_hyp)
-    metrics["F1"] = f1_score(list_label, list_hyp, average='macro')
-    metrics["REC"] = recall_score(list_label, list_hyp, average='macro')
-    metrics["PRE"] = precision_score(list_label, list_hyp, average='macro')
+    metrics["F1"] = f1_score(list_label, list_hyp, average=average, pos_label=pos_label)
+    metrics["REC"] = recall_score(list_label, list_hyp, average=average, pos_label=pos_label)
+    metrics["PRE"] = precision_score(list_label, list_hyp, average=average, pos_label=pos_label)
     return metrics
