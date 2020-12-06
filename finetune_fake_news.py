@@ -65,7 +65,7 @@ def evaluate_model(args, model, optimizer, valid_loader):
     pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
     for i, batch_data in enumerate(pbar):
         batch_seq = batch_data[-1]        
-        ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[:-1], i2w=i2w, device='cuda')
+        ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[1:-1], i2w=i2w, device='cuda')
         if args.loss == 'CE':
             loss = ce_loss
         else:
@@ -101,7 +101,7 @@ def train(args, model, optimizer, train_loader, valid_loader):
     elif args.loss == 'CL':
         criterion = CLoss()
 
-    best_loss, cnt = 1000, 0
+    best_F1, cnt = 0, 0
     for epoch in range(args.num_train_epochs):
         model.train()
         torch.set_grad_enabled(True)
@@ -112,7 +112,7 @@ def train(args, model, optimizer, train_loader, valid_loader):
         train_pbar = tqdm(train_loader, leave=True, total=len(train_loader))
         for i, batch_data in enumerate(train_pbar):
             # Forward model
-            ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[:-1], i2w=i2w, device='cuda')
+            ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[1:-1], i2w=i2w, device='cuda')
             if args.loss == 'CE':
                 loss = ce_loss
             else:
@@ -147,7 +147,7 @@ def train(args, model, optimizer, train_loader, valid_loader):
         pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
         for i, batch_data in enumerate(pbar):
             batch_seq = batch_data[-1]        
-            ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[:-1], i2w=i2w, device='cuda')
+            ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[1:-1], i2w=i2w, device='cuda')
             if args.loss == 'CE':
                 loss = ce_loss
             else:
@@ -165,6 +165,7 @@ def train(args, model, optimizer, train_loader, valid_loader):
             pbar.set_description("VALID LOSS:{:.4f} {}".format(total_valid_loss/(i+1), metrics_to_string(metrics)))
 
         metrics = classification_metrics_fn(list_hyp, list_label)
+        eval_F1 = metrics["F1"]
         eval_log = "(Epoch {}) VALID LOSS:{:.4f} {}".format((epoch+1),
             total_valid_loss/(i+1), metrics_to_string(metrics))
         print(eval_log)
@@ -173,8 +174,8 @@ def train(args, model, optimizer, train_loader, valid_loader):
         
         eval_loss = total_valid_loss/(i+1)
         # check whether to save after each epoch
-        if eval_loss < best_loss:
-            best_loss = eval_loss 
+        if eval_F1 > best_F1:
+            best_F1 = eval_F1 
             cnt = 0
             if not args.model_save_path:
                 path = '/home/jiziwei/FakeNews/models/'+args.model_name_or_path+'-'+args.loss+str(epoch+1)+'.pt'
@@ -232,12 +233,12 @@ if __name__ == '__main__':
     # Instantiate model
     model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
 
-    train_dataset_path = './data/train.tsv'
-    valid_dataset_path = './data/valid.tsv'
+    train_dataset_path = '/home/jiziwei/FakeNews/math6380/data/train.tsv'
+    valid_dataset_path = '/home/jiziwei/FakeNews/math6380/data/valid.tsv'
     # test_dataset_path = './dataset/test.tsv'
 
-    train_dataset = FakeNewsDataset(train_dataset_path, tokenizer, lowercase=False)
-    valid_dataset = FakeNewsDataset(valid_dataset_path, tokenizer, lowercase=False)
+    train_dataset = FakeNewsDataset(tokenizer, train_dataset_path, lowercase=False)
+    valid_dataset = FakeNewsDataset(tokenizer, valid_dataset_path, lowercase=False)
     # test_dataset = FakeNewsDataset(test_dataset_path, tokenizer, lowercase=False)
 
     train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=args.per_gpu_train_batch_size, num_workers=8, shuffle=True)  
