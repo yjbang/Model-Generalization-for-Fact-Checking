@@ -8,6 +8,7 @@
 
 
 import os, sys
+import re
 import argparse
 import random
 import numpy as np
@@ -70,7 +71,7 @@ def evaluate(args, model, valid_loader, result_path):
     pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
     for i, batch_data in enumerate(pbar):
         batch_seq = batch_data[-1]        
-        ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[:-1], i2w=i2w, device='cuda')
+        ce_loss, batch_hyp, batch_label, logits, labels = forward_sequence_classification(model, batch_data[1:-1], i2w=i2w, device='cuda')
         if args.loss == 'CE':
             loss = ce_loss
         else:
@@ -88,9 +89,32 @@ def evaluate(args, model, valid_loader, result_path):
         pbar.set_description("VALID LOSS:{:.4f} {}".format(total_loss/(i+1), metrics_to_string(metrics)))
 
     metrics = classification_metrics_fn(list_hyp, list_label)
+    
     print("VALID LOSS:{:.4f} {}".format(total_loss/(i+1), metrics_to_string(metrics)))
     with open(result_path, 'w') as f:
         f.write("VALID LOSS:{:.4f} {}".format(total_loss/(i+1), metrics_to_string(metrics)))
+        
+def test(args, model, valid_loader, result_path):
+
+    # Evaluate on validation
+    model.eval()
+    torch.set_grad_enabled(False)
+    list_hyp, list_ids = [], []
+
+    pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
+    for i, batch_data in enumerate(pbar):
+        batch_ids = batch_data[0]        
+        batch_hyp, logits = forward_sequence_classification(model, batch_data[1:-1], i2w=i2w, is_test=True, device='cuda')
+        # Calculate evaluation metrics
+        list_hyp += batch_hyp
+        list_ids += batch_ids
+
+    with open(result_path, 'w') as f:
+        print('writing')
+        f.write('id,label')
+        for id, pre in zip(list_ids, list_hyp):
+            f.write('\n'+str(id)+','+pre)
+            
     
     
 
@@ -102,12 +126,11 @@ def evaluate(args, model, valid_loader, result_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name_or_path', type=str, default='roberta-base')
-    parser.add_argument('--per_gpu_train_batch_size', type=int, default=2)
-    parser.add_argument('--per_gpu_eval_batch_size', type=int, default=2)
+    parser.add_argument('--model_name_or_path', type=str, default='roberta-large')
+    parser.add_argument('--per_gpu_eval_batch_size', type=int, default=16)
     parser.add_argument('--loss', type=str, default='CE')
-    parser.add_argument('--num_train_epochs', type=int, default=20)
-    parser.add_argument('--learning_rate', type=float, default=3e-6)
+    parser.add_argument('--test', type=bool, default=False)
+    
     
     args = parser.parse_args()
     print(args)
@@ -120,34 +143,35 @@ if __name__ == '__main__':
         
     # # Fine Tuning & Evaluation
 
-    for file in os.listdir('/home/jiziwei/FakeNews/models'):
-        if not file.startswith('.'):
-            print(file)
-            args.loss = file.split('-')[-1]
-            args.model_name_or_path = '-'.join(file.split('-')[:-1])
-            
-            for f in os.listdir('/home/jiziwei/FakeNews/models/'+file):
-                if f.endswith('.pt') and not f.endswith('optimizer.pt'):
-                    model_path = '/home/jiziwei/FakeNews/models/'+file+'/'+f
-                    break
-                    
-            # Load Tokenizer and Config
-            tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-            config = AutoConfig.from_pretrained(args.model_name_or_path)
-            config.num_labels = FakeNewsDataset.NUM_LABELS
-            
-#             test_dataset_path = '/home/jiziwei/FakeNews/math6380/data/covid19_infodemic_english_data/processed_covid19_infodemic_english_data.tsv'
-            test_dataset_path = '/home/jiziwei/FakeNews/math6380/data/valid.tsv'
-            test_dataset = FakeNewsDataset(test_dataset_path, tokenizer, lowercase=False)
+    for model_path in ['/home/jiziwei/FakeNews/math6380/save/roberta_finetune.CE.1e-6/roberta-large-CE3.pt']:
+        # Load Tokenizer and Config
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+        config = AutoConfig.from_pretrained(args.model_name_or_path)
+        config.num_labels = FakeNewsDataset.NUM_LABELS
+
+#             test_dataset_path = '/home/jiziwei/FakeNews/math6380/data/covid19_infodemic_english_data/processed_covid19_infodemic_english_data2.tsv'
+        test_dataset_path = '/home/jiziwei/FakeNews/math6380/data/valid.tsv'
+#         test_dataset_path = '/home/jiziwei/FakeNews/math6380/data/Constraint_English_Test.tsv'
+
+
+        # Instantiate model
+        model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
+        model.load_state_dict(torch.load(model_path))
+
+        model = model.cuda()
+        if args.test:
+            test_dataset = FakeNewsDataset(tokenizer, dataset_path=test_dataset_path, lowercase=False, is_test=True)
+            test_loader = FakeNewsDataLoader(dataset=test_dataset, max_seq_len=512, batch_size=args.per_gpu_eval_batch_size, num_workers=8, shuffle=False, is_test=True)
+
+            w2i, i2w = FakeNewsDataset.LABEL2INDEX, FakeNewsDataset.INDEX2LABEL
+            ans_path = re.sub(model_path.split('/')[-1], '', model_path)
+            test(args, model, test_loader, ans_path+'answer3.txt')
+        else:
+            test_dataset = FakeNewsDataset(tokenizer, dataset_path=test_dataset_path, lowercase=False)
             test_loader = FakeNewsDataLoader(dataset=test_dataset, max_seq_len=512, batch_size=args.per_gpu_eval_batch_size, num_workers=8, shuffle=False)
 
             w2i, i2w = FakeNewsDataset.LABEL2INDEX, FakeNewsDataset.INDEX2LABEL
-
-            # Instantiate model
-            model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
-            model.load_state_dict(torch.load(model_path))
-
-            model = model.cuda()
-            evaluate(args, model, test_loader, '/home/jiziwei/FakeNews/models/'+file+'/val_result.txt')
+            ans_path = re.sub(model_path.split('/')[-1], '', model_path)
+            evaluate(args, model, test_loader, ans_path+'result.txt')
 
 
