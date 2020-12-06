@@ -928,16 +928,19 @@ class FakeNewsDataset(Dataset):
         # df['tweet'] = df['tweet'].apply(lambda x: self.preprocess_tweet(x))
         return df
     
-    def __init__(self, dataset_path, tokenizer, no_special_token=False, *args, **kwargs):
-        self.data = self.load_dataset(dataset_path)
+    def __init__(self, tokenizer, dataset_path=None, dataset=None, no_special_token=False, *args, **kwargs):
+        if dataset is not None:
+            self.data = dataset
+        else:
+            self.data = self.load_dataset(dataset_path)
         self.tokenizer = tokenizer
         self.no_special_token = no_special_token
     
     def __getitem__(self, index):
         data = self.data.loc[index,:]
-        text, label = data['tweet'], data['label']
+        id, text, label = index, data['tweet'], data['label']
         subwords = self.tokenizer.encode(text, add_special_tokens=not self.no_special_token)
-        return np.array(subwords), np.array(label), data['tweet']
+        return id, np.array(subwords), np.array(label), data['tweet']
     
     def __len__(self):
         return len(self.data)    
@@ -950,15 +953,17 @@ class FakeNewsDataLoader(DataLoader):
         
     def _collate_fn(self, batch):
         batch_size = len(batch)
-        max_seq_len = max(map(lambda x: len(x[0]), batch))
+        max_seq_len = max(map(lambda x: len(x[1]), batch))
         max_seq_len = min(self.max_seq_len, max_seq_len)
         
         subword_batch = np.zeros((batch_size, max_seq_len), dtype=np.int64)
         mask_batch = np.zeros((batch_size, max_seq_len), dtype=np.float32)
         label_batch = np.zeros((batch_size, 1), dtype=np.int64)
         
+        ids = []
         seq_list = []
-        for i, (subwords, sentiment, raw_seq) in enumerate(batch):
+        for i, (id, subwords, sentiment, raw_seq) in enumerate(batch):
+            ids.append(id)
             subwords = subwords[:max_seq_len]
             subword_batch[i,:len(subwords)] = subwords
             mask_batch[i,:len(subwords)] = 1
@@ -966,4 +971,4 @@ class FakeNewsDataLoader(DataLoader):
             
             seq_list.append(raw_seq)
             
-        return subword_batch, mask_batch, label_batch, seq_list
+        return ids, subword_batch, mask_batch, label_batch, seq_list

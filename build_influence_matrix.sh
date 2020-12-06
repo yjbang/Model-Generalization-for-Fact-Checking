@@ -1,0 +1,6 @@
+# CUDA_VISIBLE_DEVICES=7 /home/samuel/anaconda2/envs/env_py3.7/bin/python build_influence_matrix.py --valid_dataset_path ./tmp/chunk_0.tsv --model_path ./tmp/model_weight.pt --index 0 > log_0.log &
+# CUDA_VISIBLE_DEVICES=2 /home/samuel/anaconda2/envs/env_py3.7/bin/python build_influence_matrix.py --valid_dataset_path ./tmp/chunk_1.tsv --model_path ./tmp/model_weight.pt --index 1 > log_1.log &
+CUDA_VISIBLE_DEVICES=0 /home/samuel/anaconda2/envs/env_py3.7/bin/python build_influence_matrix.py --valid_dataset_path ./tmp/chunk_2.tsv --model_path ./tmp/model_weight.pt --index 2 > log_2.log &
+CUDA_VISIBLE_DEVICES=1 /home/samuel/anaconda2/envs/env_py3.7/bin/python build_influence_matrix.py --valid_dataset_path ./tmp/chunk_3.tsv --model_path ./tmp/model_weight.pt --index 3 > log_3.log &
+CUDA_VISIBLE_DEVICES=2 /home/samuel/anaconda2/envs/env_py3.7/bin/python build_influence_matrix.py --valid_dataset_path ./tmp/chunk_4.tsv --model_path ./tmp/model_weight.pt --index 4 > log_4.log &
+CUDA_VISIBLE_DEVICES=7 /home/samuel/anaconda2/envs/env_py3.7/bin/python build_influence_matrix.py --valid_dataset_path ./tmp/chunk_5.tsv --model_path ./tmp/model_weight.pt --index 5 > log_5.log

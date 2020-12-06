@@ -15,6 +15,8 @@ from torch.autograd import Variable
 # elif args.loss == 'CE':
 #     criterion = torch.nn.CrossEntropyLoss()
 
+
+# Symmetric Cross Entropy for Robust Learning with Noisy Labels https://arxiv.org/pdf/1908.06112.pdf
 class SCELoss(nn.Module):
     def __init__(self, alpha=1.0, beta=1.0, num_classes=2):
         super(SCELoss, self).__init__()
@@ -56,7 +58,11 @@ class SCELoss(nn.Module):
 #         t_loss = torch.clamp_max(Lq, Lqk)
 #         loss = torch.mean(t_loss)
 #         return loss  
-    
+
+
+
+#generalized cross entropy   
+#from paper Generalized cross entropy loss for training deep neural networks with noisy labels https://proceedings.neurips.cc/paper/2018/file/f2925f97bc13ad2852a7a551802feea0-Paper.pdf
 class GCELoss(nn.Module):
     def __init__(self, q=0.7, num_classes=2):
         super(GCELoss, self).__init__()
@@ -73,7 +79,7 @@ class GCELoss(nn.Module):
     
     
     
-#CL    
+#CL  Curriculum Loss: Robust Learning and Generalization against Label Corruption  https://arxiv.org/pdf/1905.10045.pdf
 # num_classes=2
 def HardHingeLoss(logit, groundTruth, device):    
     Nc = logit.data.size()

@@ -1,8 +1,78 @@
 import torch
+import torch.nn.functional as F
+from transformers import BertForSequenceClassification, RobertaForSequenceClassification
+from .utils import generate_random_mask
+from torch.nn import CrossEntropyLoss
 
 ###
 # Forward Function
 ###
+
+# Forward function for sequence classification with mask
+def forward_mask_sequence_classification(model, batch_data, i2w, apply_mask=False, device='cpu', **kwargs):
+    # Unpack batch data
+    if len(batch_data) == 4:
+        (ids, subword_batch, mask_batch, label_batch) = batch_data
+        token_type_batch = None
+    elif len(batch_data) == 5:
+        (ids, subword_batch, mask_batch, token_type_batch, label_batch) = batch_data
+    
+    # Prepare input & label
+    subword_batch = torch.LongTensor(subword_batch)
+    mask_batch = torch.FloatTensor(mask_batch)
+    token_type_batch = torch.LongTensor(token_type_batch) if token_type_batch is not None else None
+    label_batch = torch.LongTensor(label_batch)
+            
+    if device == "cuda":
+        subword_batch = subword_batch.cuda()
+        mask_batch = mask_batch.cuda()
+        token_type_batch = token_type_batch.cuda() if token_type_batch is not None else None
+        label_batch = label_batch.cuda()
+
+    # Forward model
+    if apply_mask:
+        if isinstance(model, BertForSequenceClassification):
+            # Apply mask
+            weight, bias = model.classifier.weight, model.classifier.bias
+            dropout_mask_batch = generate_random_mask(ids, weight.shape[0], weight.shape[1], device=device)
+            masked_weight = weight.expand_as(dropout_mask_batch) * dropout_mask_batch
+            
+            # Calculate latents
+            latents = model.bert(subword_batch, attention_mask=mask_batch, token_type_ids=token_type_batch)[1]
+            latents = model.dropout(latents)
+            
+            # Compute result
+            logits = torch.einsum('bd,bcd->bc', latents, masked_weight) + bias         
+            loss = CrossEntropyLoss()(logits.view(-1, model.num_labels), label_batch.view(-1))
+        elif isinstance(model, RobertaForSequenceClassification):
+            # Apply mask
+            weight, bias = model.classifier.out_proj.weight, model.classifier.out_proj.bias
+            dropout_mask_batch = generate_random_mask(ids, weight.shape[0], weight.shape[1], device=device)
+            masked_weight = weight.expand_as(dropout_mask_batch) * dropout_mask_batch
+                        
+            # Calculate latents
+            latents = model.roberta(subword_batch, attention_mask=mask_batch, token_type_ids=token_type_batch)[0][:,0,:]
+            latents = model.classifier.dense(latents)
+            latents = model.classifier.dropout(latents)
+            
+            # Compute result
+            logits = torch.einsum('bd,bcd->bc', latents, masked_weight) + bias            
+            loss = CrossEntropyLoss()(logits.view(-1, model.num_labels), label_batch.view(-1))
+        else:
+            raise ValueError(f'Model class `{type(model)}` is not implemented yet')
+    else:
+        outputs = model(subword_batch, attention_mask=mask_batch, token_type_ids=token_type_batch, labels=label_batch)
+        loss, logits = outputs[:2]
+    
+    # generate prediction & label list
+    list_hyp = []
+    list_label = []
+    hyp = torch.topk(logits, 1)[1]
+    for j in range(len(hyp)):
+        list_hyp.append(i2w[hyp[j].item()])
+        list_label.append(i2w[label_batch[j][0].item()])
+        
+    return loss, list_hyp, list_label, logits, label_batch
 
 # Forward function for sequence classification
 def forward_sequence_classification(model, batch_data, i2w, is_test=False, device='cpu', **kwargs):
