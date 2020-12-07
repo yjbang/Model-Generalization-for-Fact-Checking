@@ -84,7 +84,7 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(args['model_path']))
     
     # Prepare dataset
-    eval_dataset_path = './data/covid19_infodemic_english_data/processed_covid19_infodemic_english_data.tsv'
+    eval_dataset_path = './data/covid19_infodemic_english_data/processed_covid19_infodemic_english_data2.tsv'
     w2i, i2w = FakeNewsDataset.LABEL2INDEX, FakeNewsDataset.INDEX2LABEL
 
     dataset = FakeNewsDataset(dataset_path=eval_dataset_path, tokenizer=tokenizer, lowercase=False)
@@ -118,4 +118,6 @@ if __name__ == '__main__':
         pbar.set_description("EVAL LOSS:{:.4f} {}".format(total_loss/(i+1), metrics_to_string(metrics)))
 
     metrics = classification_metrics_fn(list_hyp, list_label, average='macro', pos_label='fake')
-    print("EVAL LOSS:{:.4f} {}".format(total_loss/(i+1), metrics_to_string(metrics)))
+    binary_metrics = classification_metrics_fn(list_hyp, list_label, average='binary', pos_label='fake')
+#     print("EVAL LOSS:{:.4f} {}".format(total_loss/(i+1), metrics_to_string(metrics)))    
+    print(f"{args['model_type']}\t{args['model_path'].split('/')[-1][:-3]}\t{metrics_to_string(metrics)}\t{metrics_to_string(binary_metrics)}")
