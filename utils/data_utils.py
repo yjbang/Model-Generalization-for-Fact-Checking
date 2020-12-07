@@ -911,7 +911,7 @@ class FakeNewsDataset(Dataset):
     "\U000024C2-\U0001F251"
     "]+")
 
-    def preprocess_tweet(text):
+    def preprocess_tweet(self, text):
         text = re.sub(r'(https://\S+)', '<URL>', text)
         #     text = text.replace('THREAD: ', '')
         text = self.EMOJI_PATTERN.sub(r'', text)
@@ -929,7 +929,7 @@ class FakeNewsDataset(Dataset):
                 for l in reader.readlines()[1:]:
                     id, txt = l.split('\t')
                     if self.process:
-                        df = df.append({'id': id, 'tweet':preprocess_tweet(txt.strip())}, ignore_index=True)
+                        df = df.append({'id': id, 'tweet':self.preprocess_tweet(txt.strip())}, ignore_index=True)
                     else:
                         df = df.append({'id': id, 'tweet':txt.strip()}, ignore_index=True)
         else:
@@ -938,7 +938,7 @@ class FakeNewsDataset(Dataset):
                 for l in reader.readlines()[1:]:
                     id, txt, label = l.split('\t')
                     if self.process:
-                        df = df.append({'id': id, 'tweet':preprocess_tweet(txt.strip()), 'label':self.LABEL2INDEX[label.strip()]}, ignore_index=True)
+                        df = df.append({'id': id, 'tweet':self.preprocess_tweet(txt.strip()), 'label':self.LABEL2INDEX[label.strip()]}, ignore_index=True)
                     else:
                         df = df.append({'id': id, 'tweet':txt.strip(), 'label':self.LABEL2INDEX[label.strip()]}, ignore_index=True)
                 

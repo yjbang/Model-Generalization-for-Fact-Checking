@@ -217,6 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_save_path', type=str, default='./save/')
     parser.add_argument("--do_test", action="store_true", help="Whether to run eval on the test set.")
     parser.add_argument('--eval_model_ckpt', type=str, default='./save/')
+    parser.add_argument('--process', type=bool, default=False)
 
     args = parser.parse_args()
     print(args)
@@ -237,8 +238,8 @@ if __name__ == '__main__':
     valid_dataset_path = '/home/jiziwei/FakeNews/math6380/data/valid.tsv'
     # test_dataset_path = './dataset/test.tsv'
 
-    train_dataset = FakeNewsDataset(tokenizer, train_dataset_path, lowercase=False)
-    valid_dataset = FakeNewsDataset(tokenizer, valid_dataset_path, lowercase=False)
+    train_dataset = FakeNewsDataset(tokenizer, train_dataset_path, lowercase=False, process=args.process)
+    valid_dataset = FakeNewsDataset(tokenizer, valid_dataset_path, lowercase=False, process=args.process)
     # test_dataset = FakeNewsDataset(test_dataset_path, tokenizer, lowercase=False)
 
     train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=args.per_gpu_train_batch_size, num_workers=8, shuffle=True)  
