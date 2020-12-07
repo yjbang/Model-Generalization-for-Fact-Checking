@@ -911,7 +911,7 @@ class FakeNewsDataset(Dataset):
     "\U000024C2-\U0001F251"
     "]+")
 
-    def preprocess_tweet(text):
+    def preprocess_tweet(self, text):
         text = re.sub(r'(https://\S+)', '<URL>', text)
         #     text = text.replace('THREAD: ', '')
         text = self.EMOJI_PATTERN.sub(r'', text)
