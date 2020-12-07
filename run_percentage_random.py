@@ -139,6 +139,8 @@ def get_filtered_dataloader(data_loader, id_list, inclusive=True, batch_size=8, 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--percentage', type=float)
+    parser.add_argument('--apply_mask', action='store_true', default=False)
+    parser.add_argument('--model_type', type=str, default='roberta-base')
 
     args = vars(parser.parse_args())
     print(args)
@@ -150,23 +152,24 @@ if __name__ == '__main__':
     set_seed(26092020)
 
     # Load Tokenizer and Config
-    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
-    config = AutoConfig.from_pretrained('roberta-base')
+    tokenizer = AutoTokenizer.from_pretrained(args['model_type'])
+    config = AutoConfig.from_pretrained(args['model_type'])
     config.num_labels = FakeNewsDataset.NUM_LABELS
 
     # Instantiate model
-    model = AutoModelForSequenceClassification.from_pretrained('roberta-base', config=config)
+    model = AutoModelForSequenceClassification.from_pretrained(args['model_type'], config=config)
     
     # Prepare dataset
     train_dataset_path = './data/train.tsv'
     valid_dataset_path = './data/valid.tsv'
     w2i, i2w = FakeNewsDataset.LABEL2INDEX, FakeNewsDataset.INDEX2LABEL
-
+    bs = 8 if args['model_type'] == 'roberta-base' else 2
+    
     train_dataset = FakeNewsDataset(dataset_path=train_dataset_path, tokenizer=tokenizer, lowercase=False)
     valid_dataset = FakeNewsDataset(dataset_path=valid_dataset_path, tokenizer=tokenizer, lowercase=False)
 
-    train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=8, num_workers=8, shuffle=True)  
-    valid_loader = FakeNewsDataLoader(dataset=valid_dataset, max_seq_len=512, batch_size=8, num_workers=8, shuffle=False)
+    train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=bs, num_workers=bs, shuffle=True)  
+    valid_loader = FakeNewsDataLoader(dataset=valid_dataset, max_seq_len=512, batch_size=bs, num_workers=bs, shuffle=False)
 
     # Prepare for training
     percentage = args['percentage']
@@ -179,15 +182,15 @@ if __name__ == '__main__':
     print(f'Random Idx: {filt_indices}')
     
     print(f'== Retraining with {percentage * 100}% cleansing (remove {len(filt_indices)} samples) ==')
-    filt_train_loader = get_filtered_dataloader(train_loader, filt_indices, inclusive=False, batch_size=8, shuffle=True)
+    filt_train_loader = get_filtered_dataloader(train_loader, filt_indices, inclusive=False, batch_size=bs, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-5)
     model = model.cuda()
 
     # Train
-    n_epochs = 10
+    n_epochs = 25
     best_val_metric, best_metrics, best_state_dict = 0, None, None
-    early_stop, count_stop = 3, 0
+    early_stop, count_stop = 5, 0
     for epoch in range(n_epochs):
         model.train()
         torch.set_grad_enabled(True)
@@ -198,7 +201,7 @@ if __name__ == '__main__':
         train_pbar = tqdm(filt_train_loader, leave=True, total=len(filt_train_loader))
         for i, batch_data in enumerate(train_pbar):
             # Forward model
-            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=True, device='cuda')
+            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=args['apply_mask'], device='cuda')
             loss, batch_hyp, batch_label, logits, label_batch = outputs
 
             # Update model
@@ -231,7 +234,7 @@ if __name__ == '__main__':
         pbar = tqdm(valid_loader, leave=True, total=len(valid_loader))
         for i, batch_data in enumerate(pbar):
             batch_seq = batch_data[-1]        
-            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=False, device='cuda')
+            outputs = forward_mask_sequence_classification(model, batch_data[:-1], i2w=i2w, apply_mask=args['apply_mask'], device='cuda')
             loss, batch_hyp, batch_label, logits, label_batch = outputs
 
             # Calculate total loss
@@ -267,4 +270,4 @@ if __name__ == '__main__':
     # Save best model
     for k, v in best_state_dict.items():
         best_state_dict[k] = v.cpu()
-    torch.save(best_state_dict, f'./tmp/model_weight_rand_c{percentage}.pt')
+    torch.save(best_state_dict, f'./tmp/model_weight_rand_{args["model_type"]}_c{percentage}.pt')
