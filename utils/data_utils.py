@@ -928,18 +928,25 @@ class FakeNewsDataset(Dataset):
             with open(path) as reader:
                 for l in reader.readlines()[1:]:
                     id, txt = l.split('\t')
-                    df = df.append({'id': id, 'tweet':txt.strip()}, ignore_index=True)
+                    if self.process:
+                        df = df.append({'id': id, 'tweet':preprocess_tweet(txt.strip())}, ignore_index=True)
+                    else:
+                        df = df.append({'id': id, 'tweet':txt.strip()}, ignore_index=True)
         else:
             df = pd.DataFrame(columns=['id', 'tweet', 'label'])
             with open(path) as reader:
                 for l in reader.readlines()[1:]:
                     id, txt, label = l.split('\t')
-                    df = df.append({'id': id, 'tweet':txt.strip(), 'label':self.LABEL2INDEX[label.strip()]}, ignore_index=True)
+                    if self.process:
+                        df = df.append({'id': id, 'tweet':preprocess_tweet(txt.strip()), 'label':self.LABEL2INDEX[label.strip()]}, ignore_index=True)
+                    else:
+                        df = df.append({'id': id, 'tweet':txt.strip(), 'label':self.LABEL2INDEX[label.strip()]}, ignore_index=True)
                 
         return df
     
-    def __init__(self, tokenizer, dataset_path=None, dataset=None, no_special_token=False, is_test=False, *args, **kwargs):
+    def __init__(self, tokenizer, dataset_path=None, dataset=None, no_special_token=False, is_test=False, process=False, *args, **kwargs):
         self.is_test = is_test
+        self.process = process
         if dataset is not None:
             self.data = dataset
         else:
