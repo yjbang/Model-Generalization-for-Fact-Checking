@@ -132,7 +132,6 @@ def get_filtered_dataloader(data_loader, id_list, inclusive=True, batch_size=8, 
     else:
         filt_df = df[~df['id'].isin(id_list)].reset_index(drop=True)
     dataset = FakeNewsDataset(dataset_path=None, dataset=filt_df, tokenizer=tokenizer, lowercase=False)
-    print("len(filter_list), len(source), len(filtered)", len(id_list), len(df), len(filt_df))
     data_loader = FakeNewsDataLoader(dataset=dataset, max_seq_len=512, batch_size=batch_size, num_workers=8, shuffle=shuffle)  
     return data_loader
     
@@ -174,6 +173,9 @@ if __name__ == '__main__':
     # Prepare for training
     percentage = args['percentage']
 
+    # Reset random seed
+    set_seed(26092020)
+    
     filt_indices = index_percent_list[f'{percentage:.2f}']
     set_seed(len(filt_indices))
 
