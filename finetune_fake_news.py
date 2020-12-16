@@ -234,17 +234,19 @@ if __name__ == '__main__':
     # Instantiate model
     model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
 
-    train_dataset_path = '/home/jiziwei/FakeNews/math6380/data/train.tsv'
-    valid_dataset_path = '/home/jiziwei/FakeNews/math6380/data/valid.tsv'
-    # test_dataset_path = './dataset/test.tsv'
+    # train_dataset_path = '/home/jiziwei/FakeNews/math6380/data/train.tsv'
+    # valid_dataset_path = '/home/jiziwei/FakeNews/math6380/data/valid.tsv'
+    train_dataset_path = './data/train.tsv'
+    valid_dataset_path = './data/valid.tsv'
+    test_dataset_path = './data/test.tsv'
 
     train_dataset = FakeNewsDataset(tokenizer, train_dataset_path, lowercase=False, process=args.process)
     valid_dataset = FakeNewsDataset(tokenizer, valid_dataset_path, lowercase=False, process=args.process)
-    # test_dataset = FakeNewsDataset(test_dataset_path, tokenizer, lowercase=False)
+    test_dataset = FakeNewsDataset(tokenizer, test_dataset_path, lowercase=False, process=args.process)
 
     train_loader = FakeNewsDataLoader(dataset=train_dataset, max_seq_len=512, batch_size=args.per_gpu_train_batch_size, num_workers=8, shuffle=True)  
     valid_loader = FakeNewsDataLoader(dataset=valid_dataset, max_seq_len=512, batch_size=args.per_gpu_eval_batch_size, num_workers=8, shuffle=False)  
-    # test_loader = FakeNewsDataLoader(dataset=test_dataset, max_seq_len=512, batch_size=args.batch_size, num_workers=8, shuffle=False)
+    test_loader = FakeNewsDataLoader(dataset=test_dataset, max_seq_len=512, batch_size=args.per_gpu_eval_batch_size, num_workers=8, shuffle=False)
 
     w2i, i2w = FakeNewsDataset.LABEL2INDEX, FakeNewsDataset.INDEX2LABEL
 
@@ -261,6 +263,6 @@ if __name__ == '__main__':
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
         model = model.cuda()
         optimizer.load_state_dict(torch.load(args.eval_model_ckpt.replace('.pt', 'optimizer.pt')))
-        evaluate_model(args, model, optimizer, valid_loader)
+        evaluate_model(args, model, optimizer, test_loader)
 
 
