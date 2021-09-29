@@ -1,4 +1,4 @@
-## The Adapter-Bot: All-In-One Controllable Conversational Model
+## Model Generalization on COVID-19 Fake News Detection*
 
 <img align="right" src="imgs/HKUST.jpg" width="12%">
 
