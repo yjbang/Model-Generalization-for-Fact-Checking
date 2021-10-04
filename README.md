@@ -16,3 +16,12 @@ If you find this paper and code useful, please cite our paper:
   year={2021}
 }
 ```
+
+### Data:
+The dataset used in the paper <Model Generalization on COVID-19 Fake News Detection> is from two different papers regarding COVID-19 fake news. We are sharing it so you can duplicate our result with same data splits (valid/test).
+
+1. Fake-News COVID-19 (FakeNews-19)
+: COVID-19 fake-news detection task proposed at CONSTRAINT 2021 (Website: https://constraint-shared-task-2021.github.io/)
+
+2. Tweets COVID-19 (Tweets-19) 
+: From a paper <Fighting the COVID-19 Infodemic in Social Media: A Holistic Perspective and a Call to Arms> [[PDF]](https://arxiv.org/abs/2007.07996) (released for fighting for the COVID-19 Infodemic tweets.
